@@ -3,78 +3,92 @@ package com.daalgos;
 
 import java.util.*;
 
+
+import com.daalgos.util.Metrics;
+import java.util.Arrays;
+import java.util.Comparator;
+
 public class ClosestPair {
+    private static Metrics metrics;
+
+    public static double findClosest(Point[] points, Metrics m) {
+        metrics = m;
+        metrics.start();
+        Point[] sortedX = points.clone();
+        Point[] sortedY = points.clone();
+        Arrays.sort(sortedX, Comparator.comparingDouble(p -> p.x));
+        Arrays.sort(sortedY, Comparator.comparingDouble(p -> p.y));
+        double result = closest(sortedX, sortedY);
+        metrics.stop();
+        return result;
+    }
+
+    private static double closest(Point[] Px, Point[] Py) {
+        metrics.enterRecursion();
+        int n = Px.length;
+        if (n <= 3) {
+            metrics.exitRecursion();
+            return bruteForce(Px);
+        }
+
+        int mid = n / 2;
+        Point midPoint = Px[mid];
+
+        Point[] Qx = Arrays.copyOfRange(Px, 0, mid);
+        Point[] Rx = Arrays.copyOfRange(Px, mid, n);
+
+        Point[] Qy = new Point[mid];
+        Point[] Ry = new Point[n - mid];
+        int li = 0, ri = 0;
+        for (Point p : Py) {
+            if (p.x <= midPoint.x && li < mid) Qy[li++] = p;
+            else Ry[ri++] = p;
+        }
+
+        double dl = closest(Qx, Qy);
+        double dr = closest(Rx, Ry);
+        double d = Math.min(dl, dr);
+
+        double stripMin = stripClosest(Py, midPoint.x, d);
+
+        metrics.exitRecursion();
+        return Math.min(d, stripMin);
+    }
+
+    private static double bruteForce(Point[] pts) {
+        double min = Double.POSITIVE_INFINITY;
+        for (int i = 0; i < pts.length; i++) {
+            for (int j = i + 1; j < pts.length; j++) {
+                metrics.incComparisons();
+                double dist = pts[i].distance(pts[j]);
+                if (dist < min) min = dist;
+            }
+        }
+        return min;
+    }
+
+    private static double stripClosest(Point[] Py, double midX, double d) {
+        Point[] strip = Arrays.stream(Py)
+                .filter(p -> Math.abs(p.x - midX) < d)
+                .toArray(Point[]::new);
+
+        double min = d;
+        for (int i = 0; i < strip.length; i++) {
+            for (int j = i + 1; j < strip.length && (strip[j].y - strip[i].y) < min; j++) {
+                metrics.incComparisons();
+                double dist = strip[i].distance(strip[j]);
+                if (dist < min) min = dist;
+            }
+        }
+        return min;
+    }
 
     public static class Point {
         public final double x, y;
         public Point(double x, double y) { this.x = x; this.y = y; }
-    }
-
-    public static double closestPair(Point[] points) {
-        Point[] sortedByX = points.clone();
-        Arrays.sort(sortedByX, Comparator.comparingDouble(p -> p.x));
-
-        Point[] sortedByY = points.clone();
-        Arrays.sort(sortedByY, Comparator.comparingDouble(p -> p.y));
-
-        return closestRecursive(sortedByX, sortedByY);
-    }
-
-    private static double closestRecursive(Point[] px, Point[] py) {
-        int n = px.length;
-        if (n <= 3) return bruteForce(px);
-
-        int mid = n / 2;
-        Point midPoint = px[mid];
-
-        Point[] Qx = Arrays.copyOfRange(px, 0, mid);
-        Point[] Rx = Arrays.copyOfRange(px, mid, n);
-
-        List<Point> QyList = new ArrayList<>();
-        List<Point> RyList = new ArrayList<>();
-        for (Point p : py) {
-            if (p.x <= midPoint.x) QyList.add(p);
-            else RyList.add(p);
+        public double distance(Point other) {
+            return Math.hypot(x - other.x, y - other.y);
         }
-
-        Point[] Qy = QyList.toArray(new Point[0]);
-        Point[] Ry = RyList.toArray(new Point[0]);
-
-        double dLeft = closestRecursive(Qx, Qy);
-        double dRight = closestRecursive(Rx, Ry);
-
-        double d = Math.min(dLeft, dRight);
-
-        return Math.min(d, stripClosest(py, midPoint.x, d));
-    }
-
-    private static double stripClosest(Point[] py, double midX, double d) {
-        List<Point> strip = new ArrayList<>();
-        for (Point p : py) {
-            if (Math.abs(p.x - midX) < d) strip.add(p);
-        }
-
-        double min = d;
-        for (int i = 0; i < strip.size(); i++) {
-            for (int j = i + 1; j < strip.size() && (strip.get(j).y - strip.get(i).y) < min; j++) {
-                min = Math.min(min, dist(strip.get(i), strip.get(j)));
-            }
-        }
-        return min;
-    }
-
-    private static double bruteForce(Point[] points) {
-        double min = Double.MAX_VALUE;
-        for (int i = 0; i < points.length; i++) {
-            for (int j = i + 1; j < points.length; j++) {
-                min = Math.min(min, dist(points[i], points[j]));
-            }
-        }
-        return min;
-    }
-
-    private static double dist(Point a, Point b) {
-        double dx = a.x - b.x, dy = a.y - b.y;
-        return Math.sqrt(dx * dx + dy * dy);
     }
 }
+

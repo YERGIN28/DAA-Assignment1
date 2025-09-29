@@ -4,7 +4,7 @@ import com.daalgos.MergeSort;
 import com.daalgos.QuickSort;
 import com.daalgos.DeterministicSelect;
 import com.daalgos.ClosestPair;
-import com.daalgos.ClosestPair.Point;
+import com.daalgos.Point;
 import com.daalgos.util.CsvWriter;
 import com.daalgos.util.Metrics;
 
@@ -33,12 +33,13 @@ public class Benchmark {
             DeterministicSelect.select(arr.clone(), kth, m3);
             writer.write("select", n, m3);
 
-            ClosestPair.Point[] pts = new ClosestPair.Point[n];
+            Point[] pts = new Point[n];
             for (int i = 0; i < n; i++) {
-                pts[i] = new ClosestPair.Point(rnd.nextDouble() * 1000, rnd.nextDouble() * 1000);
+                pts[i] = new Point(rnd.nextDouble() * 1000, rnd.nextDouble() * 1000);
             }
             Metrics m4 = new Metrics();
-            ClosestPair.findClosest(pts, m4);
+            ClosestPair.findClosest(pts);
+
             writer.write("closest", n, m4);
         }
     }

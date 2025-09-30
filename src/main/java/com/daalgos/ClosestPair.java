@@ -1,80 +1,59 @@
 package com.daalgos;
 
-
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class ClosestPair {
 
-    public static class Point {
-        public final double x, y;
-        public Point(double x, double y) { this.x = x; this.y = y; }
-    }
-
-    public static double closestPair(Point[] points) {
+    public static double findClosest(Point[] points) {
         Point[] sortedByX = points.clone();
         Arrays.sort(sortedByX, Comparator.comparingDouble(p -> p.x));
-
-        Point[] sortedByY = points.clone();
-        Arrays.sort(sortedByY, Comparator.comparingDouble(p -> p.y));
-
-        return closestRecursive(sortedByX, sortedByY);
+        return closestUtil(sortedByX, 0, sortedByX.length - 1);
     }
 
-    private static double closestRecursive(Point[] px, Point[] py) {
-        int n = px.length;
-        if (n <= 3) return bruteForce(px);
-
-        int mid = n / 2;
-        Point midPoint = px[mid];
-
-        Point[] Qx = Arrays.copyOfRange(px, 0, mid);
-        Point[] Rx = Arrays.copyOfRange(px, mid, n);
-
-        List<Point> QyList = new ArrayList<>();
-        List<Point> RyList = new ArrayList<>();
-        for (Point p : py) {
-            if (p.x <= midPoint.x) QyList.add(p);
-            else RyList.add(p);
+    private static double closestUtil(Point[] points, int left, int right) {
+        if (right - left <= 3) {
+            return bruteForce(Arrays.copyOfRange(points, left, right + 1));
         }
 
-        Point[] Qy = QyList.toArray(new Point[0]);
-        Point[] Ry = RyList.toArray(new Point[0]);
-
-        double dLeft = closestRecursive(Qx, Qy);
-        double dRight = closestRecursive(Rx, Ry);
-
+        int mid = (left + right) / 2;
+        double dLeft = closestUtil(points, left, mid);
+        double dRight = closestUtil(points, mid + 1, right);
         double d = Math.min(dLeft, dRight);
 
-        return Math.min(d, stripClosest(py, midPoint.x, d));
+        double midX = points[mid].x;
+        Point[] strip = Arrays.stream(points, left, right + 1)
+                .filter(p -> Math.abs(p.x - midX) < d)
+                .toArray(Point[]::new);
+
+        Arrays.sort(strip, Comparator.comparingDouble(p -> p.y));
+
+        return Math.min(d, stripClosest(strip, d));
     }
 
-    private static double stripClosest(Point[] py, double midX, double d) {
-        List<Point> strip = new ArrayList<>();
-        for (Point p : py) {
-            if (Math.abs(p.x - midX) < d) strip.add(p);
-        }
-
+    private static double stripClosest(Point[] strip, double d) {
         double min = d;
-        for (int i = 0; i < strip.size(); i++) {
-            for (int j = i + 1; j < strip.size() && (strip.get(j).y - strip.get(i).y) < min; j++) {
-                min = Math.min(min, dist(strip.get(i), strip.get(j)));
+        for (int i = 0; i < strip.length; i++) {
+            for (int j = i + 1; j < strip.length && (strip[j].y - strip[i].y) < min; j++) {
+                double dist = Point.distance(strip[i], strip[j]);
+                if (dist < min) {
+                    min = dist;
+                }
             }
         }
         return min;
     }
 
-    private static double bruteForce(Point[] points) {
-        double min = Double.MAX_VALUE;
+    public static double bruteForce(Point[] points) {
+        double minDist = Double.POSITIVE_INFINITY;
         for (int i = 0; i < points.length; i++) {
             for (int j = i + 1; j < points.length; j++) {
-                min = Math.min(min, dist(points[i], points[j]));
+                double d = Point.distance(points[i], points[j]);
+                if (d < minDist) {
+                    minDist = d;
+                }
             }
         }
-        return min;
-    }
-
-    private static double dist(Point a, Point b) {
-        double dx = a.x - b.x, dy = a.y - b.y;
-        return Math.sqrt(dx * dx + dy * dy);
+        return minDist;
     }
 }
